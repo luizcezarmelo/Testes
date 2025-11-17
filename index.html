@@ -25,7 +25,6 @@
             .interface-container, .botoes, h2, #mensagem-status { display: none; }
             #conteudo-impressao { 
                 display: block; 
-                /* O conteúdo fundido é a única coisa visível na impressão */
             }
             .documento-separador {
                 /* Força a quebra de página após cada documento HTML inserido */
@@ -112,10 +111,10 @@
             }
 
             const arquivosParaBuscar = Array.from(checkboxes).map(cb => {
-                const repoName = 'Testes'; // <<<<< SUBSTITUIR AQUI!
+                const repoName = 'Testes'; // <<<<< CORRIGIDO: Deve ser apenas o nome do repositório
                 return { 
                     id: cb.value, 
-                    // CORREÇÃO APLICADA: Incluindo o caminho completo do repositório para o GitHub Pages
+                    // Caminho corrigido, que resultará em /Testes/0.html, /Testes/1.html, etc.
                     url: `/${repoName}/${cb.value}.html` 
                 };
             });
@@ -125,7 +124,6 @@
                     fetch(item.url)
                         .then(response => {
                             if (!response.ok) {
-                                // Se a URL de fetch falhar, vamos reportar qual arquivo falhou.
                                 throw new Error(`Não foi possível carregar o arquivo: ${item.url} (Status: ${response.status})`);
                             }
                             return response.text();
@@ -141,12 +139,8 @@
                 // 2. Funde o conteúdo com separadores de página
                 let htmlParaImpressao = '';
                 conteudosHTML.forEach((html, index) => {
-                    // Adiciona o conteúdo do arquivo
                     htmlParaImpressao += `<div class="documento-separador">`;
-                    
-                    // Adiciona o cabeçalho de referência no início de cada documento
                     htmlParaImpressao += headerContent; 
-
                     htmlParaImpressao += html;
                     htmlParaImpressao += `</div>`;
                 });
@@ -154,14 +148,12 @@
                 conteudoImpressao.innerHTML = htmlParaImpressao;
                 statusDiv.textContent = 'Arquivos prontos. Abrindo janela de impressão...';
                 
-                // console.log("Conteúdo HTML Fundido Pronto:", conteudoImpressao.innerHTML); // Linha de Debug opcional
-                
                 // 3. Aciona a impressão única
                 window.print();
                 statusDiv.textContent = 'Impressão enviada. Lembre-se de configurar Frente e Verso (Duplex) no seu diálogo de impressão.';
 
             } catch (error) {
-                statusDiv.textContent = `ERRO FATAL DE CARREGAMENTO: ${error.message}. Verifique se os nomes dos arquivos e a pasta do repositório estão corretos.`;
+                statusDiv.textContent = `ERRO FATAL DE CARREGAMENTO: ${error.message}.`;
             }
         }
 
@@ -186,4 +178,3 @@
     </script>
 </body>
 </html>
-
