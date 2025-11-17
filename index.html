@@ -156,6 +156,7 @@
                 statusDiv.textContent = 'Arquivos prontos. Abrindo janela de impressão...';
 
                 // 3. Aciona a impressão única
+                console.log("Conteúdo HTML Fundido Pronto:", conteudoImpressao.innerHTML);
                 window.print();
                 statusDiv.textContent = 'Impressão enviada. Lembre-se de configurar Frente e Verso (Duplex) no seu diálogo de impressão.';
 
@@ -184,4 +185,5 @@
         criarOpcoes();
     </script>
 </body>
+
 </html>
