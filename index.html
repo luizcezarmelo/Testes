@@ -22,11 +22,10 @@
 
         /* Estilos de Impressão (Cruciais para quebra de página e ocultar interface) */
         @media print {
-            .interface-container, .botoes, h2 { display: none; }
+            .interface-container, .botoes, h2, #mensagem-status { display: none; }
             #conteudo-impressao { 
                 display: block; 
-                /* Configuração de quebra de página: garante que cada div de documento comece em uma nova página */
-                page-break-after: always;
+                /* O conteúdo fundido é a única coisa visível na impressão */
             }
             .documento-separador {
                 /* Força a quebra de página após cada documento HTML inserido */
@@ -113,30 +112,31 @@
             }
 
             const arquivosParaBuscar = Array.from(checkboxes).map(cb => {
+                const repoName = 'https://luizcezarmelo.github.io/Testes/'; // <<<<< SUBSTITUIR AQUI!
                 return { 
                     id: cb.value, 
-                    url: `${cb.value}.html` 
+                    // CORREÇÃO APLICADA: Incluindo o caminho completo do repositório para o GitHub Pages
+                    url: `/${repoName}/${cb.value}.html` 
                 };
             });
             
             try {
-                // Prepara todas as requisições de busca (fetch)
                 const promessas = arquivosParaBuscar.map(item => 
                     fetch(item.url)
                         .then(response => {
                             if (!response.ok) {
-                                throw new Error(`Não foi possível carregar ${item.url}. Verifique se o arquivo existe na pasta.`);
+                                // Se a URL de fetch falhar, vamos reportar qual arquivo falhou.
+                                throw new Error(`Não foi possível carregar o arquivo: ${item.url} (Status: ${response.status})`);
                             }
                             return response.text();
                         })
                 );
 
-                // Espera que todos os arquivos sejam carregados
                 const conteudosHTML = await Promise.all(promessas);
 
-                // 1. Adiciona o cabeçalho de referência (atendendo o requisito do texto no canto)
-                let headerContent = `<div style="text-align: right; padding: 10px; margin: 0; border-bottom: 1px solid #ccc;">`
-                headerContent += `<p style="margin:0; font-size:12px;">Referência: **${inputTexto || 'SEM REFERÊNCIA'}**</p></div>`;
+                // 1. Adiciona o cabeçalho de referência (para o requisito do texto no canto)
+                const headerContent = `<div style="text-align: right; padding: 10px; margin: 0; border-bottom: 1px solid #ccc;">`
+                    + `<p style="margin:0; font-size:12px;">Referência: **${inputTexto || 'SEM REFERÊNCIA'}**</p></div>`;
 
                 // 2. Funde o conteúdo com separadores de página
                 let htmlParaImpressao = '';
@@ -144,8 +144,7 @@
                     // Adiciona o conteúdo do arquivo
                     htmlParaImpressao += `<div class="documento-separador">`;
                     
-                    // Adiciona o cabeçalho de referência apenas na primeira página de cada documento
-                    // Para garantir que apareça no canto superior do documento no print
+                    // Adiciona o cabeçalho de referência no início de cada documento
                     htmlParaImpressao += headerContent; 
 
                     htmlParaImpressao += html;
@@ -154,14 +153,15 @@
 
                 conteudoImpressao.innerHTML = htmlParaImpressao;
                 statusDiv.textContent = 'Arquivos prontos. Abrindo janela de impressão...';
-
+                
+                // console.log("Conteúdo HTML Fundido Pronto:", conteudoImpressao.innerHTML); // Linha de Debug opcional
+                
                 // 3. Aciona a impressão única
-                console.log("Conteúdo HTML Fundido Pronto:", conteudoImpressao.innerHTML);
                 window.print();
                 statusDiv.textContent = 'Impressão enviada. Lembre-se de configurar Frente e Verso (Duplex) no seu diálogo de impressão.';
 
             } catch (error) {
-                statusDiv.textContent = `ERRO: ${error.message}`;
+                statusDiv.textContent = `ERRO FATAL DE CARREGAMENTO: ${error.message}. Verifique se os nomes dos arquivos e a pasta do repositório estão corretos.`;
             }
         }
 
@@ -169,7 +169,7 @@
         function limpar() {
             document.getElementById('texto-referencia').value = '';
             document.getElementById('mensagem-status').textContent = '';
-            document.getElementById('conteudo-impressao').innerHTML = ''; // Limpa o conteúdo fundido
+            document.getElementById('conteudo-impressao').innerHTML = ''; 
             
             const checkboxes = document.querySelectorAll('input[name="selecao-pdf"]');
             checkboxes.forEach(checkbox => {
@@ -185,5 +185,4 @@
         criarOpcoes();
     </script>
 </body>
-
 </html>
