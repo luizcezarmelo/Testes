@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fusão de HTML para Impressão Única</title>
+    <style>
+        /* Estilos do Formulário */
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f7f9; }
+        h2 { color: #0056b3; }
+        .linha { display: flex; flex-wrap: wrap; align-items: center; padding: 15px; border: 1px solid #007bff; border-radius: 8px; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .linha label { margin-right: 15px; font-weight: bold; color: #333; }
+        .checkbox-group { display: flex; flex-wrap: wrap; margin-left: 20px; gap: 15px; }
+        input[type="text"] { width: 150px; max-length: 15; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .botoes { margin-top: 20px; }
+        .botoes button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; font-weight: bold; transition: background-color 0.3s; }
+        #btn-imprimir { background-color: #28a745; color: white; }
+        #btn-imprimir:hover { background-color: #1e7e34; }
+        #btn-limpar { background-color: #dc3545; color: white; }
+        #btn-limpar:hover { background-color: #c82333; }
+        #mensagem-status { margin-top: 10px; color: #ff0000; font-weight: bold; }
+
+        /* Estilos de Impressão (Cruciais para quebra de página e ocultar interface) */
+        @media print {
+            .interface-container, .botoes, h2 { display: none; }
+            #conteudo-impressao { 
+                display: block; 
+                /* Configuração de quebra de página: garante que cada div de documento comece em uma nova página */
+                page-break-after: always;
+            }
+            .documento-separador {
+                /* Força a quebra de página após cada documento HTML inserido */
+                page-break-after: always;
+            }
+            .documento-separador:last-child {
+                /* Evita quebra de página extra no final */
+                page-break-after: auto;
+            }
+        }
+        
+        /* Oculta o conteúdo de impressão na tela, visível apenas na impressão */
+        #conteudo-impressao { display: none; }
+    </style>
+</head>
+<body>
+
+    <h2>📑 Preparação para Impressão Única (Fusão HTML)</h2>
+
+    <div class="interface-container">
+        <div class="linha">
+            <label>Referência (máx. 15 caracteres):</label>
+            <input type="text" id="texto-referencia" maxlength="15" placeholder="Digite a referência">
+            
+            <div class="checkbox-group" id="opcoes-pdf">
+                </div>
+        </div>
+    </div>
+
+    <div class="botoes">
+        <button id="btn-imprimir" onclick="iniciarImpressao()">Imprimir (Fusão Única)</button>
+        <button id="btn-limpar" onclick="limpar()">Limpar</button>
+    </div>
+
+    <div id="mensagem-status"></div>
+
+    <div id="conteudo-impressao">
+        </div>
+
+    <script>
+        const opcoesPDF = [
+            { id: '0', nome: 'KIT', isKit: true }, 
+            { id: '1', nome: '1 PLM', isKit: false },
+            { id: '2', nome: '2 P Intermunicipal', isKit: false },
+            { id: '3', nome: '3 P Interestadual', isKit: false },
+            { id: '4', nome: '4 ANAC', isKit: false },
+            { id: '5', nome: '5 IPVA', isKit: false },
+            { id: '6', nome: '6 IPI', isKit: false }
+        ];
+
+        function criarOpcoes() {
+            const container = document.getElementById('opcoes-pdf');
+            opcoesPDF.forEach(opcao => {
+                const div = document.createElement('div');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.name = 'selecao-pdf';
+                checkbox.value = opcao.id; // Ex: '0' para 0.html
+                checkbox.id = `pdf-opcao-${opcao.id}`;
+                if (opcao.isKit) checkbox.checked = true;
+
+                const label = document.createElement('label');
+                label.htmlFor = checkbox.id;
+                label.textContent = opcao.nome;
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                container.appendChild(div);
+            });
+        }
+
+        async function iniciarImpressao() {
+            const statusDiv = document.getElementById('mensagem-status');
+            const conteudoImpressao = document.getElementById('conteudo-impressao');
+            const inputTexto = document.getElementById('texto-referencia').value.trim();
+            const checkboxes = document.querySelectorAll('input[name="selecao-pdf"]:checked');
+            
+            conteudoImpressao.innerHTML = ''; // Limpa o conteúdo anterior
+            statusDiv.textContent = 'Buscando e fundindo arquivos...';
+
+            if (checkboxes.length === 0) {
+                statusDiv.textContent = "Selecione pelo menos um documento para impressão.";
+                return;
+            }
+
+            const arquivosParaBuscar = Array.from(checkboxes).map(cb => {
+                return { 
+                    id: cb.value, 
+                    url: `${cb.value}.html` 
+                };
+            });
+            
+            try {
+                // Prepara todas as requisições de busca (fetch)
+                const promessas = arquivosParaBuscar.map(item => 
+                    fetch(item.url)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`Não foi possível carregar ${item.url}. Verifique se o arquivo existe na pasta.`);
+                            }
+                            return response.text();
+                        })
+                );
+
+                // Espera que todos os arquivos sejam carregados
+                const conteudosHTML = await Promise.all(promessas);
+
+                // 1. Adiciona o cabeçalho de referência (atendendo o requisito do texto no canto)
+                let headerContent = `<div style="text-align: right; padding: 10px; margin: 0; border-bottom: 1px solid #ccc;">`
+                headerContent += `<p style="margin:0; font-size:12px;">Referência: **${inputTexto || 'SEM REFERÊNCIA'}**</p></div>`;
+
+                // 2. Funde o conteúdo com separadores de página
+                let htmlParaImpressao = '';
+                conteudosHTML.forEach((html, index) => {
+                    // Adiciona o conteúdo do arquivo
+                    htmlParaImpressao += `<div class="documento-separador">`;
+                    
+                    // Adiciona o cabeçalho de referência apenas na primeira página de cada documento
+                    // Para garantir que apareça no canto superior do documento no print
+                    htmlParaImpressao += headerContent; 
+
+                    htmlParaImpressao += html;
+                    htmlParaImpressao += `</div>`;
+                });
+
+                conteudoImpressao.innerHTML = htmlParaImpressao;
+                statusDiv.textContent = 'Arquivos prontos. Abrindo janela de impressão...';
+
+                // 3. Aciona a impressão única
+                window.print();
+                statusDiv.textContent = 'Impressão enviada. Lembre-se de configurar Frente e Verso (Duplex) no seu diálogo de impressão.';
+
+            } catch (error) {
+                statusDiv.textContent = `ERRO: ${error.message}`;
+            }
+        }
+
+        // 4. Limpar a interface (Mantém o KIT marcado)
+        function limpar() {
+            document.getElementById('texto-referencia').value = '';
+            document.getElementById('mensagem-status').textContent = '';
+            document.getElementById('conteudo-impressao').innerHTML = ''; // Limpa o conteúdo fundido
+            
+            const checkboxes = document.querySelectorAll('input[name="selecao-pdf"]');
+            checkboxes.forEach(checkbox => {
+                if (checkbox.value === '0') {
+                    checkbox.checked = true; 
+                } else {
+                    checkbox.checked = false; 
+                }
+            });
+        }
+
+        // Inicializar a aplicação
+        criarOpcoes();
+    </script>
+</body>
+</html>
