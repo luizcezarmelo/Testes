@@ -20,18 +20,36 @@
         #btn-limpar:hover { background-color: #c82333; }
         #mensagem-status { margin-top: 10px; color: #ff0000; font-weight: bold; }
 
-        /* Estilos de Impressão (Cruciais para quebra de página e ocultar interface) */
+        /* Estilos de Impressão (CORREÇÃO AGRESSIVA DE CSS) */
         @media print {
-            .interface-container, .botoes, h2, #mensagem-status { display: none; }
-            #conteudo-impressao { 
-                display: block; 
+            /* 1. Esconde a Interface Principal */
+            .interface-container, .botoes, h2, #mensagem-status { display: none !important; }
+
+            /* 2. Garante que o Body e HTML não tenham margens estranhas */
+            html, body {
+                width: 100%;
+                margin: 0 !important;
+                padding: 0 !important;
             }
+
+            /* 3. Força a Área de Impressão a ser visível e dominante */
+            #conteudo-impressao { 
+                display: block !important; 
+                position: relative !important;
+                width: 100% !important;
+                height: auto !important;
+                min-height: 100vh; /* Garante que a área de impressão tenha pelo menos o tamanho de uma tela */
+                overflow: visible !important;
+            }
+            
+            /* 4. Garante a Quebra de Página (Separador de Documentos) */
             .documento-separador {
-                /* Força a quebra de página após cada documento HTML inserido */
                 page-break-after: always;
+                /* Adiciona uma margem extra para compensar possíveis conflitos */
+                margin: 0; 
+                padding: 0;
             }
             .documento-separador:last-child {
-                /* Evita quebra de página extra no final */
                 page-break-after: auto;
             }
         }
@@ -102,7 +120,7 @@
             const inputTexto = document.getElementById('texto-referencia').value.trim();
             const checkboxes = document.querySelectorAll('input[name="selecao-pdf"]:checked');
             
-            conteudoImpressao.innerHTML = ''; // Limpa o conteúdo anterior
+            conteudoImpressao.innerHTML = ''; 
             statusDiv.textContent = 'Buscando e fundindo arquivos...';
 
             if (checkboxes.length === 0) {
@@ -111,10 +129,9 @@
             }
 
             const arquivosParaBuscar = Array.from(checkboxes).map(cb => {
-                const repoName = 'Testes'; // <<<<< CORRIGIDO: Deve ser apenas o nome do repositório
+                const repoName = 'Testes'; // CORRIGIDO PARA O SEU REPOSITÓRIO
                 return { 
                     id: cb.value, 
-                    // Caminho corrigido, que resultará em /Testes/0.html, /Testes/1.html, etc.
                     url: `/${repoName}/${cb.value}.html` 
                 };
             });
@@ -132,7 +149,7 @@
 
                 const conteudosHTML = await Promise.all(promessas);
 
-                // 1. Adiciona o cabeçalho de referência (para o requisito do texto no canto)
+                // 1. Adiciona o cabeçalho de referência 
                 const headerContent = `<div style="text-align: right; padding: 10px; margin: 0; border-bottom: 1px solid #ccc;">`
                     + `<p style="margin:0; font-size:12px;">Referência: **${inputTexto || 'SEM REFERÊNCIA'}**</p></div>`;
 
@@ -141,12 +158,20 @@
                 conteudosHTML.forEach((html, index) => {
                     htmlParaImpressao += `<div class="documento-separador">`;
                     htmlParaImpressao += headerContent; 
+                    
+                    // Adiciona o HTML do arquivo. Precisa remover possíveis tags <html> e <body> do conteúdo.
+                    // Uma conversão de PDF para HTML pode incluir tags desnecessárias.
+                    html = html.replace(/<(!DOCTYPE|html|head|body)[^>]*>/gi, '').replace(/<\/(html|head|body)>/gi, '');
+                    
                     htmlParaImpressao += html;
                     htmlParaImpressao += `</div>`;
                 });
 
                 conteudoImpressao.innerHTML = htmlParaImpressao;
                 statusDiv.textContent = 'Arquivos prontos. Abrindo janela de impressão...';
+                
+                // MENSAGEM DE DEBUG: Confirma que o conteúdo existe
+                console.log("Status: Sucesso na Fusão. Verificando o tamanho do HTML:", conteudoImpressao.innerHTML.length + " bytes.");
                 
                 // 3. Aciona a impressão única
                 window.print();
