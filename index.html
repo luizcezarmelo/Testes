@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fusão de HTML para Impressão Única</title>
+    <title>Fusão de Múltiplas Imagens para Impressão Única</title>
     <style>
-        /* Estilos do Formulário */
+        /* Estilos do Formulário (mantidos) */
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f7f9; }
         h2 { color: #0056b3; }
         .linha { display: flex; flex-wrap: wrap; align-items: center; padding: 15px; border: 1px solid #007bff; border-radius: 8px; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -20,47 +20,41 @@
         #btn-limpar:hover { background-color: #c82333; }
         #mensagem-status { margin-top: 10px; color: #ff0000; font-weight: bold; }
 
-        /* Estilos de Impressão (CORREÇÃO AGRESSIVA DE CSS) */
+        /* Estilos de Impressão (mantidos) */
         @media print {
-            /* 1. Esconde a Interface Principal */
             .interface-container, .botoes, h2, #mensagem-status { display: none !important; }
-
-            /* 2. Garante que o Body e HTML não tenham margens estranhas */
             html, body {
                 width: 100%;
                 margin: 0 !important;
                 padding: 0 !important;
             }
-
-            /* 3. Força a Área de Impressão a ser visível e dominante */
             #conteudo-impressao { 
                 display: block !important; 
                 position: relative !important;
                 width: 100% !important;
-                height: auto !important;
-                min-height: 100vh; /* Garante que a área de impressão tenha pelo menos o tamanho de uma tela */
-                overflow: visible !important;
             }
-            
-            /* 4. Garante a Quebra de Página (Separador de Documentos) */
             .documento-separador {
                 page-break-after: always;
-                /* Adiciona uma margem extra para compensar possíveis conflitos */
                 margin: 0; 
                 padding: 0;
             }
             .documento-separador:last-child {
                 page-break-after: auto;
             }
+            .documento-separador img {
+                width: 100%; 
+                height: auto;
+                display: block; 
+            }
         }
         
-        /* Oculta o conteúdo de impressão na tela, visível apenas na impressão */
+        /* Oculta o conteúdo de impressão na tela */
         #conteudo-impressao { display: none; }
     </style>
 </head>
 <body>
 
-    <h2>📑 Preparação para Impressão Única (Fusão HTML)</h2>
+    <h2>🖼️ Preparação para Impressão Única (Fusão de Imagens)</h2>
 
     <div class="interface-container">
         <div class="linha">
@@ -83,15 +77,27 @@
         </div>
 
     <script>
+        // *** DADOS CORRIGIDOS COM BASE NAS SUAS INFORMAÇÕES ***
+        // 0 (KIT): 5 páginas
+        // 1 (1 PLM): 2 páginas
+        // 2 (2 P Intermunicipal): 1 página
+        // 3 (3 P Interestadual): 1 página
+        // 4 (4 ANAC): 1 página
+        // 5 (5 IPVA): 1 página
+        // 6 (6 IPI): 1 página
         const opcoesPDF = [
-            { id: '0', nome: 'KIT', isKit: true }, 
-            { id: '1', nome: '1 PLM', isKit: false },
-            { id: '2', nome: '2 P Intermunicipal', isKit: false },
-            { id: '3', nome: '3 P Interestadual', isKit: false },
-            { id: '4', nome: '4 ANAC', isKit: false },
-            { id: '5', nome: '5 IPVA', isKit: false },
-            { id: '6', nome: '6 IPI', isKit: false }
+            { id: '0', nome: 'KIT', isKit: true, pages: 5 },      
+            { id: '1', nome: '1 PLM', isKit: false, pages: 2 },    
+            { id: '2', nome: '2 P Intermunicipal', isKit: false, pages: 1 }, 
+            { id: '3', nome: '3 P Interestadual', isKit: false, pages: 1 },
+            { id: '4', nome: '4 ANAC', isKit: false, pages: 1 },
+            { id: '5', nome: '5 IPVA', isKit: false, pages: 1 },
+            { id: '6', nome: '6 IPI', isKit: false, pages: 1 }
         ];
+        
+        // Nome do repositório no GitHub
+        const repoName = 'Testes'; 
+        const baseURL = `https://luizcezarmelo.github.io/${repoName}`;
 
         function criarOpcoes() {
             const container = document.getElementById('opcoes-pdf');
@@ -100,7 +106,7 @@
                 const checkbox = document.createElement('input');
                 checkbox.type = 'checkbox';
                 checkbox.name = 'selecao-pdf';
-                checkbox.value = opcao.id; // Ex: '0' para 0.html
+                checkbox.value = opcao.id;
                 checkbox.id = `pdf-opcao-${opcao.id}`;
                 if (opcao.isKit) checkbox.checked = true;
 
@@ -121,68 +127,56 @@
             const checkboxes = document.querySelectorAll('input[name="selecao-pdf"]:checked');
             
             conteudoImpressao.innerHTML = ''; 
-            statusDiv.textContent = 'Buscando e fundindo arquivos...';
+            statusDiv.textContent = 'Preparando imagens para impressão...';
 
             if (checkboxes.length === 0) {
-                statusDiv.textContent = "Selecione pelo menos um documento para impressão.";
+                statusDiv.textContent = "Selecione pelo menos um documento.";
                 return;
             }
-
-            const arquivosParaBuscar = Array.from(checkboxes).map(cb => {
-                const repoName = 'Testes'; // CORRIGIDO PARA O SEU REPOSITÓRIO
-                return { 
-                    id: cb.value, 
-                    url: `/${repoName}/${cb.value}.html` 
-                };
+            
+            // 1. Mapeia os IDs selecionados para os dados completos do documento (incluindo número de páginas)
+            const documentosSelecionados = Array.from(checkboxes).map(cb => {
+                return opcoesPDF.find(doc => doc.id === cb.value);
             });
             
+            // 2. Constrói o HTML com todas as imagens sequencialmente
+            let htmlParaImpressao = '';
+            const headerContent = `<div style="text-align: right; padding: 10px; margin: 0; border-bottom: 1px solid #ccc;">`
+                + `<p style="margin:0; font-size:12px;">Referência: **${inputTexto || 'SEM REFERÊNCIA'}**</p></div>`;
+
             try {
-                const promessas = arquivosParaBuscar.map(item => 
-                    fetch(item.url)
-                        .then(response => {
-                            if (!response.ok) {
-                                throw new Error(`Não foi possível carregar o arquivo: ${item.url} (Status: ${response.status})`);
-                            }
-                            return response.text();
-                        })
-                );
-
-                const conteudosHTML = await Promise.all(promessas);
-
-                // 1. Adiciona o cabeçalho de referência 
-                const headerContent = `<div style="text-align: right; padding: 10px; margin: 0; border-bottom: 1px solid #ccc;">`
-                    + `<p style="margin:0; font-size:12px;">Referência: **${inputTexto || 'SEM REFERÊNCIA'}**</p></div>`;
-
-                // 2. Funde o conteúdo com separadores de página
-                let htmlParaImpressao = '';
-                conteudosHTML.forEach((html, index) => {
-                    htmlParaImpressao += `<div class="documento-separador">`;
-                    htmlParaImpressao += headerContent; 
-                    
-                    // Adiciona o HTML do arquivo. Precisa remover possíveis tags <html> e <body> do conteúdo.
-                    // Uma conversão de PDF para HTML pode incluir tags desnecessárias.
-                    html = html.replace(/<(!DOCTYPE|html|head|body)[^>]*>/gi, '').replace(/<\/(html|head|body)>/gi, '');
-                    
-                    htmlParaImpressao += html;
-                    htmlParaImpressao += `</div>`;
+                // Itera sobre cada documento selecionado
+                documentosSelecionados.forEach(doc => {
+                    // Itera sobre o número de páginas desse documento (ex: de 1 até 5)
+                    for (let page = 1; page <= doc.pages; page++) {
+                        // Constrói a URL da imagem (ex: .../Testes/0-1.png, .../Testes/0-2.png, .../Testes/0-5.png)
+                        const imageUrl = `${baseURL}/${doc.id}-${page}.png`;
+                        
+                        htmlParaImpressao += `<div class="documento-separador">`;
+                        
+                        // Adiciona o cabeçalho de referência 
+                        htmlParaImpressao += headerContent; 
+                        
+                        // Insere a tag <img>
+                        htmlParaImpressao += `<img src="${imageUrl}" alt="Documento ${doc.id} Página ${page}">`;
+                        
+                        htmlParaImpressao += `</div>`;
+                    }
                 });
 
                 conteudoImpressao.innerHTML = htmlParaImpressao;
-                statusDiv.textContent = 'Arquivos prontos. Abrindo janela de impressão...';
-                
-                // MENSAGEM DE DEBUG: Confirma que o conteúdo existe
-                console.log("Status: Sucesso na Fusão. Verificando o tamanho do HTML:", conteudoImpressao.innerHTML.length + " bytes.");
+                statusDiv.textContent = 'Imagens carregadas. Abrindo janela de impressão...';
                 
                 // 3. Aciona a impressão única
                 window.print();
-                statusDiv.textContent = 'Impressão enviada. Lembre-se de configurar Frente e Verso (Duplex) no seu diálogo de impressão.';
+                statusDiv.textContent = 'Impressão enviada. Verifique se as imagens foram carregadas na visualização de impressão.';
 
             } catch (error) {
-                statusDiv.textContent = `ERRO FATAL DE CARREGAMENTO: ${error.message}.`;
+                statusDiv.textContent = `ERRO FATAL: ${error.message}.`;
             }
         }
 
-        // 4. Limpar a interface (Mantém o KIT marcado)
+        // Função Limpar (mantida)
         function limpar() {
             document.getElementById('texto-referencia').value = '';
             document.getElementById('mensagem-status').textContent = '';
