@@ -94,12 +94,12 @@
 </head>
 <body>
 
-    <h2>🖨️ Sistema de Impressão</h2>
+    <h2>🖨️ Impressão GCRC</h2>
 
     <div class="painel">
         <div class="linha">
-            <label>Paciente:</label>
-            <input type="text" id="texto-referencia" maxlength="40" placeholder="F999999 PACIENTE TESTE 2A">
+            <label>Referência:</label>
+            <input type="text" id="texto-referencia" maxlength="15" placeholder="">
         </div>
         
         <div class="linha">
@@ -109,7 +109,7 @@
         <div class="linha">
             <button id="btn-visualizar" onclick="carregarImagens()">Carregar Imagens</button>
             
-            <button id="btn-pdf" onclick="baixarPDF()">Baixar PDF</button>
+            <button id="btn-pdf" onclick="baixarPDF()">Baixar PDF (Perfeito)</button>
             
             <button id="btn-imprimir-browser" onclick="window.print()">Imprimir</button>
             
@@ -134,7 +134,8 @@
             { id: '3', nome: '3 PL Interestadual', isKit: false, pages: 1 },
             { id: '4', nome: '4 ANAC', isKit: false, pages: 1 },
             { id: '5', nome: '5 IPVA', isKit: false, pages: 1 },
-            { id: '6', nome: '6 IPI', isKit: false, pages: 1 }
+            { id: '6', nome: '6 IPI', isKit: false, pages: 1 },
+            { id: '7', nome: '7 DPVAT', isKit: false, pages: 1 } 
         ];
 
         // Inicializa Checkboxes
@@ -235,4 +236,3 @@
     </script>
 </body>
 </html>
-
