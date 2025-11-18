@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Impressor Inteligente</title>
+    <title>Impressão em lote</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* Estilos Gerais (Tela) */
@@ -107,11 +107,11 @@
         </div>
 
         <div class="linha">
-            <button id="btn-visualizar" onclick="carregarImagens()">1. Carregar Imagens</button>
+            <button id="btn-visualizar" onclick="carregarImagens()">Carregar Imagens</button>
             
-            <button id="btn-pdf" onclick="baixarPDF()">2.Baixar PDF (Perfeito)</button>
+            <button id="btn-pdf" onclick="baixarPDF()">Baixar PDF</button>
             
-            <button id="btn-imprimir-browser" onclick="window.print()">2.Imprimir Agora</button>
+            <button id="btn-imprimir-browser" onclick="window.print()">Imprimir</button>
             
             <button id="btn-limpar" onclick="limpar()">Limpar</button>
         </div>
@@ -128,10 +128,10 @@
         const baseURL = `https://luizcezarmelo.github.io/${repoName}`;
         
         const documentos = [
-            { id: '0', nome: 'KIT (6 págs)', isKit: true, pages: 6 }, 
+            { id: '0', nome: 'KIT', isKit: true, pages: 6 }, 
             { id: '1', nome: '1 PLM', isKit: false, pages: 2 },
-            { id: '2', nome: '2 P Intermunicipal', isKit: false, pages: 1 },
-            { id: '3', nome: '3 P Interestadual', isKit: false, pages: 1 },
+            { id: '2', nome: '2 PL Intermunicipal', isKit: false, pages: 1 },
+            { id: '3', nome: '3 PL Interestadual', isKit: false, pages: 1 },
             { id: '4', nome: '4 ANAC', isKit: false, pages: 1 },
             { id: '5', nome: '5 IPVA', isKit: false, pages: 1 },
             { id: '6', nome: '6 IPI', isKit: false, pages: 1 }
@@ -235,3 +235,4 @@
     </script>
 </body>
 </html>
+
