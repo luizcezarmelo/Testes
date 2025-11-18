@@ -20,7 +20,7 @@
         #btn-limpar:hover { background-color: #c82333; }
         #mensagem-status { margin-top: 10px; color: #ff0000; font-weight: bold; }
 
-        /* Estilos de Impressão (mantidos) */
+        /* Estilos de Impressão (CORRIGIDO) */
         @media print {
             .interface-container, .botoes, h2, #mensagem-status { display: none !important; }
             html, body {
@@ -33,14 +33,20 @@
                 position: relative !important;
                 width: 100% !important;
             }
-            .documento-separador {
-                page-break-after: always;
+            /* AQUI ESTÁ A CORREÇÃO: Removemos o 'page-break-after' */
+            /* e usamos 'page-break-before' APENAS a partir do segundo elemento. */
+            .documento-separador:not(:first-child) {
+                page-break-before: always !important; /* Força a quebra */
+                page-break-inside: avoid !important;  /* Evita quebras desnecessárias */
                 margin: 0; 
                 padding: 0;
             }
+            
+            /* Esta regra agora é desnecessária, mas a mantemos limpa */
             .documento-separador:last-child {
                 page-break-after: auto;
             }
+            
             .documento-separador img {
                 width: 100%; 
                 height: auto;
@@ -77,9 +83,9 @@
         </div>
 
     <script>
-        // *** CORREÇÃO: KIT (ID 0) AGORA TEM 6 PÁGINAS ***
+        // Contagens que resultam em 13 páginas
         const opcoesPDF = [
-            { id: '0', nome: 'KIT', isKit: true, pages: 6 },      // CORRIGIDO: 6 arquivos (0-1.png até 0-6.png)
+            { id: '0', nome: 'KIT', isKit: true, pages: 6 },      
             { id: '1', nome: '1 PLM', isKit: false, pages: 2 },    
             { id: '2', nome: '2 P Intermunicipal', isKit: false, pages: 1 }, 
             { id: '3', nome: '3 P Interestadual', isKit: false, pages: 1 },
@@ -138,7 +144,6 @@
             try {
                 documentosSelecionados.forEach(doc => {
                     for (let page = 1; page <= doc.pages; page++) {
-                        // CONSTRUÇÃO DA URL: ID-PAGINA.png (ex: 0-1.png até 0-6.png)
                         const imageUrl = `${baseURL}/${doc.id}-${page}.png`; 
                         
                         htmlParaImpressao += `<div class="documento-separador">`;
@@ -151,15 +156,17 @@
                 conteudoImpressao.innerHTML = htmlParaImpressao;
                 statusDiv.textContent = 'Imagens carregadas. Abrindo janela de impressão...';
                 
+                // Força a atualização do DOM antes de imprimir
+                await new Promise(resolve => setTimeout(resolve, 50)); 
+                
                 window.print();
-                statusDiv.textContent = 'Impressão enviada. Lembre-se de que a falha em imprimir indica um erro 404 de imagem no Console.';
+                statusDiv.textContent = 'Impressão enviada.';
 
             } catch (error) {
                 statusDiv.textContent = `ERRO FATAL: ${error.message}.`;
             }
         }
 
-        // Função Limpar (mantida)
         function limpar() {
             document.getElementById('texto-referencia').value = '';
             document.getElementById('mensagem-status').textContent = '';
