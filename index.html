@@ -3,177 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerador de PDF Unificado</title>
+    <title>Impressor Inteligente</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f7f9; }
-        h2 { color: #0056b3; }
-        .linha { 
-            display: flex; flex-wrap: wrap; align-items: center; padding: 15px; 
-            border: 1px solid #007bff; border-radius: 8px; background-color: #ffffff; 
+        /* Estilos Gerais (Tela) */
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
+        h2 { color: #0056b3; margin-bottom: 10px; }
+        
+        /* Painel de Controle */
+        .painel { 
+            background: white; padding: 20px; border-radius: 8px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; 
         }
-        .linha label { margin-right: 15px; font-weight: bold; color: #333; }
-        .checkbox-group { display: flex; flex-wrap: wrap; margin-left: 20px; gap: 15px; }
-        input[type="text"] { width: 150px; max-length: 15; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-        .botoes { margin-top: 20px; }
+        .linha { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 15px; }
+        .checkbox-group { display: flex; flex-wrap: wrap; gap: 10px; }
+        .checkbox-item { 
+            background: #e9ecef; padding: 8px 12px; border-radius: 4px; 
+            display: flex; align-items: center; gap: 5px; cursor: pointer;
+        }
+        .checkbox-item:hover { background: #dee2e6; }
+        
+        input[type="text"] { padding: 10px; border: 1px solid #ccc; border-radius: 4px; width: 200px; }
+        
+        /* Botões */
         button { 
-            padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; 
-            margin-right: 10px; font-weight: bold; color: white; font-size: 16px;
+            padding: 12px 20px; border: none; border-radius: 5px; cursor: pointer; 
+            font-weight: bold; color: white; transition: 0.2s; font-size: 14px;
         }
-        #btn-gerar { background-color: #007bff; }
-        #btn-gerar:hover { background-color: #0056b3; }
+        #btn-visualizar { background-color: #17a2b8; }
+        #btn-pdf { background-color: #28a745; display: none; } /* Escondido inicialmente */
+        #btn-imprimir-browser { background-color: #007bff; display: none; } /* Escondido inicialmente */
         #btn-limpar { background-color: #dc3545; }
-        #mensagem-status { margin-top: 15px; font-weight: bold; color: #333; padding: 10px; background: #e9ecef; display: none; border-radius: 4px;}
+        
+        /* Área de Visualização na Tela */
+        #area-preview { 
+            display: flex; flex-direction: column; align-items: center; gap: 20px; 
+            padding: 20px; min-height: 100px;
+        }
+        
+        /* Estilos da Folha na TELA (Preview) */
+        .folha {
+            width: 210mm; height: 297mm; /* A4 */
+            background: white; border: 1px solid #ccc;
+            display: flex; flex-direction: column; 
+            position: relative; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            overflow: hidden; /* Corta excessos na visualização */
+        }
+        
+        /* A imagem deve caber dentro da folha respeitando margem */
+        .folha img {
+            width: 94%;         /* Deixa 3% de margem nas laterais */
+            height: 94%;        /* Deixa 3% de margem no topo/base */
+            object-fit: contain; /* Garante que a imagem inteira apareça sem esticar */
+            margin: auto;       /* Centraliza */
+            display: block;
+        }
+        
+        .referencia {
+            position: absolute; top: 15px; right: 20px; 
+            background: white; padding: 4px 8px; border: 1px solid black; 
+            font-weight: bold; font-size: 14px; z-index: 10;
+        }
+
+        /* --- ESTILOS DE IMPRESSÃO (CORREÇÃO DO PROBLEMA DA PÁGINA EM BRANCO) --- */
+        @media print {
+            /* 1. Esconde tudo que não é folha */
+            .painel, h2, button, .status-msg { display: none !important; }
+            body, html { margin: 0; padding: 0; background: white; height: 100%; }
+            #area-preview { margin: 0; padding: 0; display: block; gap: 0; }
+
+            /* 2. Configura a folha para impressão */
+            .folha {
+                border: none; box-shadow: none; margin: 0;
+                width: 100%; height: 100vh; /* Ocupa exatamente 1 altura de papel */
+                page-break-after: always;   /* Quebra depois de cada folha */
+                page-break-inside: avoid;   /* Evita quebrar a imagem no meio */
+                display: flex; justify-content: center; align-items: center;
+            }
+
+            /* 3. TRUQUE FINAL: Reduz ligeiramente a imagem na impressão para não "vazar" */
+            .folha img {
+                max-width: 95%;  /* Garante margem lateral */
+                max-height: 90vh; /* Garante que cabe na altura sem criar folha extra */
+            }
+
+            /* Remove a quebra da última página para não imprimir folha vazia no final */
+            .folha:last-child { page-break-after: auto; }
+        }
     </style>
 </head>
 <body>
 
-    <h2>🖨️ Gerador de Arquivo de Impressão</h2>
-    <p>Selecione os documentos. O sistema irá baixar as imagens e criar um único arquivo PDF para você.</p>
+    <h2>🖨️ Sistema de Impressão</h2>
 
-    <div class="linha">
-        <label>Referência (Top Dir.):</label>
-        <input type="text" id="texto-referencia" maxlength="15" placeholder="Ex: CLIENTE-01">
+    <div class="painel">
+        <div class="linha">
+            <label>Paciente:</label>
+            <input type="text" id="texto-referencia" maxlength="40" placeholder="F999999 PACIENTE TESTE 2A">
+        </div>
         
-        <div class="checkbox-group" id="opcoes-pdf">
-            </div>
+        <div class="linha">
+            <div class="checkbox-group" id="opcoes-container"></div>
+        </div>
+
+        <div class="linha">
+            <button id="btn-visualizar" onclick="carregarImagens()">1. Carregar Imagens</button>
+            
+            <button id="btn-pdf" onclick="baixarPDF()">2.Baixar PDF (Perfeito)</button>
+            
+            <button id="btn-imprimir-browser" onclick="window.print()">2.Imprimir Agora</button>
+            
+            <button id="btn-limpar" onclick="limpar()">Limpar</button>
+        </div>
+        <div id="status-msg" style="margin-top:10px; font-weight:bold; color:#444;"></div>
     </div>
 
-    <div class="botoes">
-        <button id="btn-gerar" onclick="gerarPDF()">Baixar PDF para Imprimir</button>
-        <button id="btn-limpar" onclick="limpar()">Limpar</button>
-    </div>
-
-    <div id="mensagem-status"></div>
+    <div id="area-preview"></div>
 
     <script>
         const { jsPDF } = window.jspdf;
-
-        // CONFIGURAÇÃO: NOME DO REPOSITÓRIO E PÁGINAS
+        
+        // --- CONFIGURAÇÃO ---
         const repoName = 'Testes'; 
         const baseURL = `https://luizcezarmelo.github.io/${repoName}`;
-
-        const opcoesPDF = [
-            { id: '0', nome: 'KIT', isKit: true, pages: 6 },      
-            { id: '1', nome: '1 PLM', isKit: false, pages: 2 },    
-            { id: '2', nome: '2 P Intermunicipal', isKit: false, pages: 1 }, 
+        
+        const documentos = [
+            { id: '0', nome: 'KIT (6 págs)', isKit: true, pages: 6 }, 
+            { id: '1', nome: '1 PLM', isKit: false, pages: 2 },
+            { id: '2', nome: '2 P Intermunicipal', isKit: false, pages: 1 },
             { id: '3', nome: '3 P Interestadual', isKit: false, pages: 1 },
             { id: '4', nome: '4 ANAC', isKit: false, pages: 1 },
             { id: '5', nome: '5 IPVA', isKit: false, pages: 1 },
             { id: '6', nome: '6 IPI', isKit: false, pages: 1 }
         ];
 
-        function criarOpcoes() {
-            const container = document.getElementById('opcoes-pdf');
-            opcoesPDF.forEach(opcao => {
-                const div = document.createElement('div');
-                const checkbox = document.createElement('input');
-                checkbox.type = 'checkbox';
-                checkbox.name = 'selecao-pdf';
-                checkbox.value = opcao.id;
-                checkbox.id = `opt-${opcao.id}`;
-                if (opcao.isKit) checkbox.checked = true;
+        // Inicializa Checkboxes
+        const container = document.getElementById('opcoes-container');
+        documentos.forEach(doc => {
+            const div = document.createElement('div');
+            div.className = 'checkbox-item';
+            div.innerHTML = `<input type="checkbox" id="doc-${doc.id}" value="${doc.id}" ${doc.isKit?'checked':''}> <label for="doc-${doc.id}">${doc.nome}</label>`;
+            container.appendChild(div);
+        });
 
-                const label = document.createElement('label');
-                label.htmlFor = checkbox.id;
-                label.textContent = opcao.nome;
-                div.appendChild(checkbox);
-                div.appendChild(label);
-                container.appendChild(div);
-            });
-        }
+        // 1. Carregar Imagens na Tela
+        function carregarImagens() {
+            const preview = document.getElementById('area-preview');
+            const ref = document.getElementById('texto-referencia').value.toUpperCase();
+            const status = document.getElementById('status-msg');
+            
+            preview.innerHTML = '';
+            status.innerText = "Carregando...";
+            
+            const selecionados = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+                .map(cb => documentos.find(d => d.id === cb.value));
 
-        function showStatus(msg, cor = '#333') {
-            const el = document.getElementById('mensagem-status');
-            el.style.display = 'block';
-            el.style.color = cor;
-            el.innerText = msg;
-        }
+            if (selecionados.length === 0) { alert("Selecione algo!"); return; }
 
-        // Função auxiliar para carregar imagem e garantir que ela existe
-        function carregarImagem(url) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = "Anonymous"; // Necessário para usar no PDF
-                // Adiciona timestamp para evitar CACHE VELHO (Resolve o problema de ver arquivo antigo)
-                img.src = url + '?v=' + new Date().getTime(); 
-                
-                img.onload = () => resolve(img);
-                img.onerror = () => reject(url);
-            });
-        }
+            let totalImagens = 0;
 
-        async function gerarPDF() {
-            const inputTexto = document.getElementById('texto-referencia').value.trim() || "";
-            const checkboxes = document.querySelectorAll('input[name="selecao-pdf"]:checked');
+            selecionados.forEach(doc => {
+                for (let i = 1; i <= doc.pages; i++) {
+                    totalImagens++;
+                    // Cache busting (?t=...) para garantir que carregue a imagem nova
+                    const url = `${baseURL}/${doc.id}-${i}.png?t=${Date.now()}`;
 
-            if (checkboxes.length === 0) {
-                alert("Selecione pelo menos um item.");
-                return;
-            }
-
-            showStatus("⏳ Baixando imagens e gerando PDF... Aguarde.");
-
-            // Cria um PDF tamanho A4 (unidade mm)
-            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            const pdfWidth = 210;
-            const pdfHeight = 297;
-
-            let paginaAtual = 0;
-
-            try {
-                // Mapeia os documentos selecionados
-                const docsSelecionados = Array.from(checkboxes).map(cb => opcoesPDF.find(o => o.id === cb.value));
-
-                for (const documento of docsSelecionados) {
-                    for (let i = 1; i <= documento.pages; i++) {
-                        
-                        // Se não for a primeira página absoluta, adiciona uma nova folha no PDF
-                        if (paginaAtual > 0) {
-                            doc.addPage();
-                        }
-
-                        // Monta URL: 0-1.png, 0-2.png...
-                        const urlImg = `${baseURL}/${documento.id}-${i}.png`;
-
-                        // Espera a imagem carregar
-                        const imgElement = await carregarImagem(urlImg);
-
-                        // Adiciona a imagem ao PDF (esticando para caber na A4)
-                        doc.addImage(imgElement, 'PNG', 0, 0, pdfWidth, pdfHeight);
-
-                        // Adiciona o Texto de Referência no canto superior direito
-                        if (inputTexto) {
-                            doc.setFontSize(12);
-                            doc.setTextColor(0, 0, 0); // Preto
-                            // Fundo branco para o texto ficar legível
-                            doc.setFillColor(255, 255, 255);
-                            doc.rect(150, 5, 50, 10, 'F'); // Caixa branca
-                            doc.text(`Ref: ${inputTexto}`, 195, 12, { align: 'right' });
-                        }
-
-                        paginaAtual++;
+                    const divFolha = document.createElement('div');
+                    divFolha.className = 'folha';
+                    
+                    // Referência no canto
+                    if(ref) {
+                        divFolha.innerHTML += `<div class="referencia">REF: ${ref}</div>`;
                     }
+
+                    const img = new Image();
+                    img.src = url;
+                    img.onload = () => { status.innerText = `Carregado: ${doc.nome} pág ${i}`; };
+                    img.onerror = () => { 
+                        divFolha.innerHTML = `<div style="color:red; padding:20px; text-align:center;">ERRO 404:<br>${doc.id}-${i}.png não encontrado!</div>`; 
+                    };
+                    
+                    divFolha.appendChild(img);
+                    preview.appendChild(divFolha);
                 }
+            });
 
-                // Salva o arquivo final
-                doc.save(`Impressao_${inputTexto || 'Documentos'}.pdf`);
-                showStatus("✅ PDF Gerado com sucesso! Verifique seus downloads.", "green");
+            status.innerText = `Pronto! ${totalImagens} páginas carregadas. Escolha como imprimir.`;
+            document.getElementById('btn-pdf').style.display = 'inline-block';
+            document.getElementById('btn-imprimir-browser').style.display = 'inline-block';
+        }
 
-            } catch (erroUrl) {
-                console.error(erroUrl);
-                showStatus(`❌ ERRO: Não foi possível encontrar a imagem: ${erroUrl}.\nVerifique se o arquivo existe no GitHub com nome minúsculo e extensão .png`, "red");
+        // 2. Gerar PDF (Opção A - Recomendada)
+        async function baixarPDF() {
+            const imgs = document.querySelectorAll('.folha img');
+            if(imgs.length === 0) return;
+
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const width = 210; 
+            const height = 297;
+
+            document.getElementById('status-msg').innerText = "Gerando PDF...";
+
+            for (let i = 0; i < imgs.length; i++) {
+                if (i > 0) doc.addPage();
+                
+                // Adiciona imagem centralizada e com margem para não cortar
+                // Usamos 200x280mm para garantir segurança de margem
+                doc.addImage(imgs[i], 'PNG', 5, 5, 200, 287, undefined, 'FAST'); 
+
+                // Adiciona Referência no PDF
+                const ref = document.getElementById('texto-referencia').value.toUpperCase();
+                if(ref) {
+                    doc.setFontSize(12);
+                    doc.setFillColor(255,255,255);
+                    doc.rect(160, 5, 45, 8, 'F');
+                    doc.text(ref, 200, 10, { align: 'right' });
+                }
             }
+            doc.save('Impressao_Documentos.pdf');
+            document.getElementById('status-msg').innerText = "PDF Baixado!";
         }
 
         function limpar() {
+            document.getElementById('area-preview').innerHTML = '';
             document.getElementById('texto-referencia').value = '';
-            document.getElementById('mensagem-status').style.display = 'none';
-            const checkboxes = document.querySelectorAll('input[name="selecao-pdf"]');
-            checkboxes.forEach(cb => cb.checked = (cb.value === '0'));
+            document.getElementById('status-msg').innerText = '';
+            document.getElementById('btn-pdf').style.display = 'none';
+            document.getElementById('btn-imprimir-browser').style.display = 'none';
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = (cb.value === '0'));
         }
-
-        criarOpcoes();
     </script>
 </body>
 </html>
