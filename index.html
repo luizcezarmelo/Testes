@@ -77,16 +77,9 @@
         </div>
 
     <script>
-        // *** DADOS CORRIGIDOS COM BASE NAS SUAS INFORMAÇÕES ***
-        // 0 (KIT): 5 páginas
-        // 1 (1 PLM): 2 páginas
-        // 2 (2 P Intermunicipal): 1 página
-        // 3 (3 P Interestadual): 1 página
-        // 4 (4 ANAC): 1 página
-        // 5 (5 IPVA): 1 página
-        // 6 (6 IPI): 1 página
+        // *** CORREÇÃO: KIT (ID 0) AGORA TEM 6 PÁGINAS ***
         const opcoesPDF = [
-            { id: '0', nome: 'KIT', isKit: true, pages: 5 },      
+            { id: '0', nome: 'KIT', isKit: true, pages: 6 },      // CORRIGIDO: 6 arquivos (0-1.png até 0-6.png)
             { id: '1', nome: '1 PLM', isKit: false, pages: 2 },    
             { id: '2', nome: '2 P Intermunicipal', isKit: false, pages: 1 }, 
             { id: '3', nome: '3 P Interestadual', isKit: false, pages: 1 },
@@ -134,32 +127,23 @@
                 return;
             }
             
-            // 1. Mapeia os IDs selecionados para os dados completos do documento (incluindo número de páginas)
             const documentosSelecionados = Array.from(checkboxes).map(cb => {
                 return opcoesPDF.find(doc => doc.id === cb.value);
             });
             
-            // 2. Constrói o HTML com todas as imagens sequencialmente
             let htmlParaImpressao = '';
             const headerContent = `<div style="text-align: right; padding: 10px; margin: 0; border-bottom: 1px solid #ccc;">`
                 + `<p style="margin:0; font-size:12px;">Referência: **${inputTexto || 'SEM REFERÊNCIA'}**</p></div>`;
 
             try {
-                // Itera sobre cada documento selecionado
                 documentosSelecionados.forEach(doc => {
-                    // Itera sobre o número de páginas desse documento (ex: de 1 até 5)
                     for (let page = 1; page <= doc.pages; page++) {
-                        // Constrói a URL da imagem (ex: .../Testes/0-1.png, .../Testes/0-2.png, .../Testes/0-5.png)
-                        const imageUrl = `${baseURL}/${doc.id}-${page}.png`;
+                        // CONSTRUÇÃO DA URL: ID-PAGINA.png (ex: 0-1.png até 0-6.png)
+                        const imageUrl = `${baseURL}/${doc.id}-${page}.png`; 
                         
                         htmlParaImpressao += `<div class="documento-separador">`;
-                        
-                        // Adiciona o cabeçalho de referência 
                         htmlParaImpressao += headerContent; 
-                        
-                        // Insere a tag <img>
                         htmlParaImpressao += `<img src="${imageUrl}" alt="Documento ${doc.id} Página ${page}">`;
-                        
                         htmlParaImpressao += `</div>`;
                     }
                 });
@@ -167,9 +151,8 @@
                 conteudoImpressao.innerHTML = htmlParaImpressao;
                 statusDiv.textContent = 'Imagens carregadas. Abrindo janela de impressão...';
                 
-                // 3. Aciona a impressão única
                 window.print();
-                statusDiv.textContent = 'Impressão enviada. Verifique se as imagens foram carregadas na visualização de impressão.';
+                statusDiv.textContent = 'Impressão enviada. Lembre-se de que a falha em imprimir indica um erro 404 de imagem no Console.';
 
             } catch (error) {
                 statusDiv.textContent = `ERRO FATAL: ${error.message}.`;
