@@ -3,87 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fusão de Múltiplas Imagens para Impressão Única</title>
+    <title>Gerador de PDF Unificado</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
-        /* Estilos do Formulário (mantidos) */
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f7f9; }
         h2 { color: #0056b3; }
-        .linha { display: flex; flex-wrap: wrap; align-items: center; padding: 15px; border: 1px solid #007bff; border-radius: 8px; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .linha { 
+            display: flex; flex-wrap: wrap; align-items: center; padding: 15px; 
+            border: 1px solid #007bff; border-radius: 8px; background-color: #ffffff; 
+        }
         .linha label { margin-right: 15px; font-weight: bold; color: #333; }
         .checkbox-group { display: flex; flex-wrap: wrap; margin-left: 20px; gap: 15px; }
         input[type="text"] { width: 150px; max-length: 15; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
         .botoes { margin-top: 20px; }
-        .botoes button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px; font-weight: bold; transition: background-color 0.3s; }
-        #btn-imprimir { background-color: #28a745; color: white; }
-        #btn-imprimir:hover { background-color: #1e7e34; }
-        #btn-limpar { background-color: #dc3545; color: white; }
-        #btn-limpar:hover { background-color: #c82333; }
-        #mensagem-status { margin-top: 10px; color: #ff0000; font-weight: bold; }
-
-        /* Estilos de Impressão (CORRIGIDO) */
-        @media print {
-            .interface-container, .botoes, h2, #mensagem-status { display: none !important; }
-            html, body {
-                width: 100%;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            #conteudo-impressao { 
-                display: block !important; 
-                position: relative !important;
-                width: 100% !important;
-            }
-            /* AQUI ESTÁ A CORREÇÃO: Removemos o 'page-break-after' */
-            /* e usamos 'page-break-before' APENAS a partir do segundo elemento. */
-            .documento-separador:not(:first-child) {
-                page-break-before: always !important; /* Força a quebra */
-                page-break-inside: avoid !important;  /* Evita quebras desnecessárias */
-                margin: 0; 
-                padding: 0;
-            }
-            
-            /* Esta regra agora é desnecessária, mas a mantemos limpa */
-            .documento-separador:last-child {
-                page-break-after: auto;
-            }
-            
-            .documento-separador img {
-                width: 100%; 
-                height: auto;
-                display: block; 
-            }
+        button { 
+            padding: 12px 25px; border: none; border-radius: 5px; cursor: pointer; 
+            margin-right: 10px; font-weight: bold; color: white; font-size: 16px;
         }
-        
-        /* Oculta o conteúdo de impressão na tela */
-        #conteudo-impressao { display: none; }
+        #btn-gerar { background-color: #007bff; }
+        #btn-gerar:hover { background-color: #0056b3; }
+        #btn-limpar { background-color: #dc3545; }
+        #mensagem-status { margin-top: 15px; font-weight: bold; color: #333; padding: 10px; background: #e9ecef; display: none; border-radius: 4px;}
     </style>
 </head>
 <body>
 
-    <h2>🖼️ Preparação para Impressão Única (Fusão de Imagens)</h2>
+    <h2>🖨️ Gerador de Arquivo de Impressão</h2>
+    <p>Selecione os documentos. O sistema irá baixar as imagens e criar um único arquivo PDF para você.</p>
 
-    <div class="interface-container">
-        <div class="linha">
-            <label>Referência (máx. 15 caracteres):</label>
-            <input type="text" id="texto-referencia" maxlength="15" placeholder="Digite a referência">
-            
-            <div class="checkbox-group" id="opcoes-pdf">
-                </div>
-        </div>
+    <div class="linha">
+        <label>Referência (Top Dir.):</label>
+        <input type="text" id="texto-referencia" maxlength="15" placeholder="Ex: CLIENTE-01">
+        
+        <div class="checkbox-group" id="opcoes-pdf">
+            </div>
     </div>
 
     <div class="botoes">
-        <button id="btn-imprimir" onclick="iniciarImpressao()">Imprimir (Fusão Única)</button>
+        <button id="btn-gerar" onclick="gerarPDF()">Baixar PDF para Imprimir</button>
         <button id="btn-limpar" onclick="limpar()">Limpar</button>
     </div>
 
     <div id="mensagem-status"></div>
 
-    <div id="conteudo-impressao">
-        </div>
-
     <script>
-        // Contagens que resultam em 13 páginas
+        const { jsPDF } = window.jspdf;
+
+        // CONFIGURAÇÃO: NOME DO REPOSITÓRIO E PÁGINAS
+        const repoName = 'Testes'; 
+        const baseURL = `https://luizcezarmelo.github.io/${repoName}`;
+
         const opcoesPDF = [
             { id: '0', nome: 'KIT', isKit: true, pages: 6 },      
             { id: '1', nome: '1 PLM', isKit: false, pages: 2 },    
@@ -93,10 +62,6 @@
             { id: '5', nome: '5 IPVA', isKit: false, pages: 1 },
             { id: '6', nome: '6 IPI', isKit: false, pages: 1 }
         ];
-        
-        // Nome do repositório no GitHub
-        const repoName = 'Testes'; 
-        const baseURL = `https://luizcezarmelo.github.io/${repoName}`;
 
         function criarOpcoes() {
             const container = document.getElementById('opcoes-pdf');
@@ -106,83 +71,108 @@
                 checkbox.type = 'checkbox';
                 checkbox.name = 'selecao-pdf';
                 checkbox.value = opcao.id;
-                checkbox.id = `pdf-opcao-${opcao.id}`;
+                checkbox.id = `opt-${opcao.id}`;
                 if (opcao.isKit) checkbox.checked = true;
 
                 const label = document.createElement('label');
                 label.htmlFor = checkbox.id;
                 label.textContent = opcao.nome;
-                
                 div.appendChild(checkbox);
                 div.appendChild(label);
                 container.appendChild(div);
             });
         }
 
-        async function iniciarImpressao() {
-            const statusDiv = document.getElementById('mensagem-status');
-            const conteudoImpressao = document.getElementById('conteudo-impressao');
-            const inputTexto = document.getElementById('texto-referencia').value.trim();
+        function showStatus(msg, cor = '#333') {
+            const el = document.getElementById('mensagem-status');
+            el.style.display = 'block';
+            el.style.color = cor;
+            el.innerText = msg;
+        }
+
+        // Função auxiliar para carregar imagem e garantir que ela existe
+        function carregarImagem(url) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.crossOrigin = "Anonymous"; // Necessário para usar no PDF
+                // Adiciona timestamp para evitar CACHE VELHO (Resolve o problema de ver arquivo antigo)
+                img.src = url + '?v=' + new Date().getTime(); 
+                
+                img.onload = () => resolve(img);
+                img.onerror = () => reject(url);
+            });
+        }
+
+        async function gerarPDF() {
+            const inputTexto = document.getElementById('texto-referencia').value.trim() || "";
             const checkboxes = document.querySelectorAll('input[name="selecao-pdf"]:checked');
-            
-            conteudoImpressao.innerHTML = ''; 
-            statusDiv.textContent = 'Preparando imagens para impressão...';
 
             if (checkboxes.length === 0) {
-                statusDiv.textContent = "Selecione pelo menos um documento.";
+                alert("Selecione pelo menos um item.");
                 return;
             }
-            
-            const documentosSelecionados = Array.from(checkboxes).map(cb => {
-                return opcoesPDF.find(doc => doc.id === cb.value);
-            });
-            
-            let htmlParaImpressao = '';
-            const headerContent = `<div style="text-align: right; padding: 10px; margin: 0; border-bottom: 1px solid #ccc;">`
-                + `<p style="margin:0; font-size:12px;">Referência: **${inputTexto || 'SEM REFERÊNCIA'}**</p></div>`;
+
+            showStatus("⏳ Baixando imagens e gerando PDF... Aguarde.");
+
+            // Cria um PDF tamanho A4 (unidade mm)
+            const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+            const pdfWidth = 210;
+            const pdfHeight = 297;
+
+            let paginaAtual = 0;
 
             try {
-                documentosSelecionados.forEach(doc => {
-                    for (let page = 1; page <= doc.pages; page++) {
-                        const imageUrl = `${baseURL}/${doc.id}-${page}.png`; 
+                // Mapeia os documentos selecionados
+                const docsSelecionados = Array.from(checkboxes).map(cb => opcoesPDF.find(o => o.id === cb.value));
+
+                for (const documento of docsSelecionados) {
+                    for (let i = 1; i <= documento.pages; i++) {
                         
-                        htmlParaImpressao += `<div class="documento-separador">`;
-                        htmlParaImpressao += headerContent; 
-                        htmlParaImpressao += `<img src="${imageUrl}" alt="Documento ${doc.id} Página ${page}">`;
-                        htmlParaImpressao += `</div>`;
+                        // Se não for a primeira página absoluta, adiciona uma nova folha no PDF
+                        if (paginaAtual > 0) {
+                            doc.addPage();
+                        }
+
+                        // Monta URL: 0-1.png, 0-2.png...
+                        const urlImg = `${baseURL}/${documento.id}-${i}.png`;
+
+                        // Espera a imagem carregar
+                        const imgElement = await carregarImagem(urlImg);
+
+                        // Adiciona a imagem ao PDF (esticando para caber na A4)
+                        doc.addImage(imgElement, 'PNG', 0, 0, pdfWidth, pdfHeight);
+
+                        // Adiciona o Texto de Referência no canto superior direito
+                        if (inputTexto) {
+                            doc.setFontSize(12);
+                            doc.setTextColor(0, 0, 0); // Preto
+                            // Fundo branco para o texto ficar legível
+                            doc.setFillColor(255, 255, 255);
+                            doc.rect(150, 5, 50, 10, 'F'); // Caixa branca
+                            doc.text(`Ref: ${inputTexto}`, 195, 12, { align: 'right' });
+                        }
+
+                        paginaAtual++;
                     }
-                });
+                }
 
-                conteudoImpressao.innerHTML = htmlParaImpressao;
-                statusDiv.textContent = 'Imagens carregadas. Abrindo janela de impressão...';
-                
-                // Força a atualização do DOM antes de imprimir
-                await new Promise(resolve => setTimeout(resolve, 50)); 
-                
-                window.print();
-                statusDiv.textContent = 'Impressão enviada.';
+                // Salva o arquivo final
+                doc.save(`Impressao_${inputTexto || 'Documentos'}.pdf`);
+                showStatus("✅ PDF Gerado com sucesso! Verifique seus downloads.", "green");
 
-            } catch (error) {
-                statusDiv.textContent = `ERRO FATAL: ${error.message}.`;
+            } catch (erroUrl) {
+                console.error(erroUrl);
+                showStatus(`❌ ERRO: Não foi possível encontrar a imagem: ${erroUrl}.\nVerifique se o arquivo existe no GitHub com nome minúsculo e extensão .png`, "red");
             }
         }
 
         function limpar() {
             document.getElementById('texto-referencia').value = '';
-            document.getElementById('mensagem-status').textContent = '';
-            document.getElementById('conteudo-impressao').innerHTML = ''; 
-            
+            document.getElementById('mensagem-status').style.display = 'none';
             const checkboxes = document.querySelectorAll('input[name="selecao-pdf"]');
-            checkboxes.forEach(checkbox => {
-                if (checkbox.value === '0') {
-                    checkbox.checked = true; 
-                } else {
-                    checkbox.checked = false; 
-                }
-            });
+            checkboxes.forEach(cb => cb.checked = (cb.value === '0'));
         }
 
-        // Inicializar a aplicação
         criarOpcoes();
     </script>
 </body>
