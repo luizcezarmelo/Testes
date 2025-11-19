@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Impressor Inteligente (Final)</title>
+    <title>GCRC</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* Estilos Gerais (Tela) */
@@ -17,7 +17,6 @@
         }
         .linha { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; margin-bottom: 20px; }
         
-        /* Checkboxes em Grade (Layout Aprovado) */
         .checkbox-group { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -122,19 +121,19 @@
     
     <div class="painel">
         <div class="linha">
-            <label for="texto-referencia">Referência:</label>
-            <input type="text" id="texto-referencia" maxlength="15" placeholder="Ex: CLIENTE-A">
+            <label for="texto-referencia">Paciente:</label>
+            <input type="text" id="texto-referencia" maxlength="60" placeholder="Ex: F999999 PACIENTE TESTE 2A">
         </div>
         
         <h3>Documentos Disponíveis:</h3>
         <div class="checkbox-group" id="opcoes-container"></div>
         
         <div class="linha botoes-linha">
-            <button id="btn-visualizar" onclick="carregarImagens()">1. Carregar Imagens</button>
+            <button id="btn-visualizar" onclick="carregarImagens(false)">Exibir</button>
             
-            <button id="btn-pdf" onclick="baixarPDF()">2. Opção A: Baixar PDF (Perfeito)</button>
+            <button id="btn-pdf" onclick="baixarPDF()">Baixar</button>
             
-            <button id="btn-imprimir-browser" onclick="window.print()">2. Opção B: Imprimir Agora</button>
+            <button id="btn-imprimir-browser" onclick="carregarImagens(true)">Imprimir</button>
             
             <button id="btn-limpar" onclick="limpar()">Limpar</button>
         </div>
@@ -149,14 +148,14 @@
         // --- CONFIGURAÇÃO DE URLS ---
         const REPO_NAME = 'Testes';
         const BASE_URL_ONLINE = `https://luizcezarmelo.github.io/${REPO_NAME}/`; 
-        const BASE_URL_LOCAL = './'; // Caminho relativo para acesso local
+        const BASE_URL_LOCAL = './'; 
         // ---------------------------
         
         const documentos = [
-            { id: '0', nome: 'KIT (6 págs)', isKit: true, pages: 6 }, 
-            { id: '1', nome: '1 PLM', isKit: false, pages: 2 },
-            { id: '2', nome: '2 P Intermunicipal', isKit: false, pages: 1 },
-            { id: '3', nome: '3 P Interestadual', isKit: false, pages: 1 },
+            { id: '0', nome: 'KIT', isKit: true, pages: 6 }, 
+            { id: '1', nome: '1 PL Municipal', isKit: false, pages: 2 },
+            { id: '2', nome: '2 PL Intermunicipal', isKit: false, pages: 1 },
+            { id: '3', nome: '3 PL Interestadual', isKit: false, pages: 1 },
             { id: '4', nome: '4 ANAC', isKit: false, pages: 1 },
             { id: '5', nome: '5 IPVA', isKit: false, pages: 1 },
             { id: '6', nome: '6 IPI', isKit: false, pages: 1 },
@@ -173,13 +172,14 @@
         });
 
         // 1. Carregar Imagens na Tela
-        function carregarImagens() {
+        // Parâmetro "imprimirAutomaticamente": se for true, abre a impressão ao terminar de carregar tudo
+        function carregarImagens(imprimirAutomaticamente = false) {
             const preview = document.getElementById('area-preview');
             const ref = document.getElementById('texto-referencia').value.toUpperCase();
             const status = document.getElementById('status-msg');
             
             preview.innerHTML = '';
-            status.innerText = "Carregando...";
+            status.innerText = "Iniciando carregamento...";
             
             const selecionados = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
                 .map(cb => documentos.find(d => d.id === cb.value));
@@ -189,66 +189,71 @@
                 return; 
             }
 
-            let totalImagens = 0;
+            // Cálculo do total de imagens para controlar quando terminar
+            let totalParaCarregar = 0;
+            selecionados.forEach(d => totalParaCarregar += d.pages);
+            let imagensCarregadasCount = 0;
+
+            // Função interna para checar se acabou o carregamento
+            function verificarTermino() {
+                imagensCarregadasCount++;
+                status.innerText = `Carregando... (${imagensCarregadasCount} de ${totalParaCarregar})`;
+                
+                if (imagensCarregadasCount === totalParaCarregar) {
+                    status.innerText = "Pronto! Todas as páginas carregadas.";
+                    if (imprimirAutomaticamente) {
+                        // Pequeno atraso para garantir que o navegador renderizou
+                        setTimeout(() => {
+                            window.print();
+                        }, 500);
+                    }
+                }
+            }
 
             selecionados.forEach(doc => {
                 for (let i = 1; i <= doc.pages; i++) {
-                    totalImagens++;
                     
                     let filename = `${doc.id}-${i}.png`;
                     
-                    // --- LÓGICA DE CARREGAMENTO INTELIGENTE ---
-                    
-                    // 1. Tenta a URL principal do GitHub (Com cache-busting)
+                    // --- LÓGICA DE CARREGAMENTO COM FALLBACK ---
                     let url_principal = `${BASE_URL_ONLINE}${filename}?t=${Date.now()}`;
-                    
-                    // 2. Se for o DPVAT, e for acesso local, ou se a URL principal falhar, usa o caminho local como fallback.
                     let url_fallback = `${BASE_URL_LOCAL}${filename}`; 
 
                     const divFolha = document.createElement('div');
                     divFolha.className = 'folha';
                     
-                    // Referência no canto
                     if(ref) {
-                        divFolha.innerHTML += `<div class="referencia">REF: ${ref}</div>`;
+                        divFolha.innerHTML += `<div class="referencia">Paciente: ${ref}</div>`;
                     }
 
                     const img = new Image();
-                    img.src = url_principal; // Tenta o caminho principal primeiro
+                    img.src = url_principal; 
                     
-                    // Variável para rastrear a URL que realmente falhou
-                    let url_tentada = url_principal; 
-
+                    // Sucesso no carregamento principal
                     img.onload = () => { 
-                        status.innerText = `Carregado: ${doc.nome} pág ${i} (${totalImagens} de ${totalImagens}).`; 
+                        verificarTermino();
                     };
 
+                    // Erro no carregamento principal -> Tenta fallback
                     img.onerror = () => { 
-                        // Se o DPVAT (id 7) falhar, ou qualquer outro arquivo estiver sendo acessado localmente (file:), tenta o fallback.
                         if (doc.id === '7' || window.location.protocol === 'file:') {
-                            img.src = url_fallback;
-                            url_tentada = url_fallback;
+                            img.src = url_fallback; 
+                            
+                            img.onload = () => verificarTermino();
 
-                            // Novo handler de erro para o fallback
                             img.onerror = () => {
-                                // O FALLBACK também falhou.
                                 divFolha.innerHTML = `<div style="color:red; padding:20px; text-align:center;">
-                                    **ERRO 404:**<br>
-                                    Não foi possível carregar o arquivo: **${filename}**<br>
-                                    Caminho FINAL tentado: **${url_tentada}**<br>
-                                    Verifique se o arquivo está na pasta raiz.
+                                    **ERRO 404:**<br>Arquivo ${filename} não encontrado.
                                 </div>`; 
-                                status.innerText = `ERRO 404: ${filename} falhou (ambos caminhos)!`;
+                                status.innerText = `Erro no arquivo: ${filename}`;
+                                verificarTermino(); // Conta como carregado (com erro) para não travar
                             };
                         } else {
-                            // Se não for DPVAT e não for acesso local, falhou definitivamente na URL do GitHub.
                             divFolha.innerHTML = `<div style="color:red; padding:20px; text-align:center;">
-                                **ERRO 404:**<br>
-                                Não foi possível carregar o arquivo: **${filename}**<br>
-                                Caminho tentado: **${url_tentada}**<br>
-                                Verifique a ortografia do nome do arquivo no seu repositório.
+                                **ERRO 404:**<br>Arquivo ${filename} não encontrado no servidor.
                             </div>`; 
-                            status.innerText = `ERRO 404: ${filename} falhou!`;
+                            status.innerText = `Erro no arquivo: ${filename}`;
+                            verificarTermino(); // Conta como carregado (com erro) para não travar
                         }
                     };
                     
@@ -256,35 +261,26 @@
                     preview.appendChild(divFolha);
                 }
             });
-
-            status.innerText = `Pronto! ${totalImagens} páginas carregadas (verifique a área de preview por erros). Escolha como imprimir.`;
-            document.getElementById('btn-pdf').style.display = 'inline-block';
-            document.getElementById('btn-imprimir-browser').style.display = 'inline-block';
         }
 
-        // 2. Gerar PDF (Opção A - Recomendada)
+        // 2. Gerar PDF
         async function baixarPDF() {
             const imgs = document.querySelectorAll('.folha img');
             if(imgs.length === 0) {
-                document.getElementById('status-msg').innerText = "Nenhuma imagem para gerar PDF. Carregue primeiro.";
+                alert("Por favor, clique em 'Exibir' para carregar os documentos antes de baixar.");
                 return;
             }
 
             const doc = new jsPDF('p', 'mm', 'a4');
-            
             document.getElementById('status-msg').innerText = "Gerando PDF...";
 
             for (let i = 0; i < imgs.length; i++) {
-                // Pula imagens que falharam
                 if (!imgs[i].complete || imgs[i].naturalHeight === 0) continue; 
-                
 
                 if (i > 0) doc.addPage();
                 
-                // Adiciona imagem centralizada e com margem para não cortar
                 doc.addImage(imgs[i], 'PNG', 5, 5, 200, 287, undefined, 'FAST'); 
 
-                // Adiciona Referência no PDF
                 const ref = document.getElementById('texto-referencia').value.toUpperCase();
                 if(ref) {
                     doc.setFontSize(12);
@@ -301,8 +297,6 @@
             document.getElementById('area-preview').innerHTML = '';
             document.getElementById('texto-referencia').value = '';
             document.getElementById('status-msg').innerText = '';
-            document.getElementById('btn-pdf').style.display = 'none';
-            document.getElementById('btn-imprimir-browser').style.display = 'none';
             document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = (cb.value === '0'));
         }
     </script>
